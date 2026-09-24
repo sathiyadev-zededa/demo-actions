@@ -1,0 +1,96 @@
+services:
+  model-downloader:
+    image: busybox:1.36
+    pull_policy: if_not_present
+    restart: "no"
+    volumes:
+      - ppe-models:/app/models
+    command:
+      - sh
+      - -c
+      - |
+        ONNX_FILE="/app/models/best.onnx"
+        YAML_FILE="/app/models/data.yaml"
+        BASE_URL="https://raw.githubusercontent.com/sathiyadev-zededa/model/main"
+        if [ -f "$$ONNX_FILE" ] && [ -f "$$YAML_FILE" ]; then
+          echo "Model already present — skipping download"
+          exit 0
+        fi
+        echo "Downloading model files..."
+        wget -O "$$ONNX_FILE" "$$BASE_URL/best.onnx"
+        wget -O "$$YAML_FILE" "$$BASE_URL/data.yaml"
+        echo "Done — $$(du -sh $$ONNX_FILE | cut -f1)"
+
+  onnx-server:
+    image: commonpoc.azurecr.io/onnx_server:latest
+    pull_policy: always
+    restart: unless-stopped
+    depends_on:
+      model-downloader:
+        condition: service_completed_successfully
+    command:
+      - python
+      - onnx_inference_server.py
+      - --model
+      - /app/models/best.onnx
+      - --data
+      - /app/models/data.yaml
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8000"
+    ports:
+      - "8000:8000"
+    volumes:
+      - ppe-models:/app/models:ro
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 5s
+    # Uncomment on the zrun GPU image:
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  video-processor:
+    image: commonpoc.azurecr.io/video_processor:latest
+    pull_policy: always
+    restart: unless-stopped
+    depends_on:
+      onnx-server:
+        condition: service_healthy
+    environment:
+      NO_PROXY: localhost,127.0.0.1,onnx-server
+      no_proxy: localhost,127.0.0.1,onnx-server
+    command:
+      - python
+      - video_processor_mpeg.py
+      - --video
+      - Safety_Full_Hat_and_Vest.mp4
+      - --inference
+      - http://onnx-server:8000
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8080"
+      - --metrics-port
+      - "9091"
+    ports:
+      - "8080:8080"
+      - "9091:9091"
+
+volumes:
+  ppe-models:
+    name: ppe-models
