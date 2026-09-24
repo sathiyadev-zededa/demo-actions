@@ -1,0 +1,100 @@
+name: Update edge-app
+
+on: # yamllint disable-line rule:truthy
+  push:
+    branches:
+      - main
+    paths:
+      - "docker-compose.yaml"
+      - "terraform/**"
+      - "scripts/purge_edge_app_instances.sh"
+      - ".github/workflows/update-edge-app.yml"
+  pull_request:
+    paths:
+      - "docker-compose.yaml"
+      - "terraform/**"
+      - "scripts/purge_edge_app_instances.sh"
+      - ".github/workflows/update-edge-app.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: update-edge-app-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  TF_IN_AUTOMATION: "true"
+  TF_INPUT: "false"
+  TF_VAR_zedcloud_url: ${{ vars.ZEDCLOUD_URL }}
+  TF_VAR_zedcloud_token: ${{ secrets.ZEDCLOUD_TOKEN }}
+  TF_VAR_edge_app_name: ${{ vars.ZEDCLOUD_EDGE_APP_NAME }}
+  TF_VAR_edge_app_title: ${{ vars.ZEDCLOUD_EDGE_APP_TITLE }}
+  TF_VAR_project_name: ${{ vars.ZEDCLOUD_PROJECT_NAME }}
+
+jobs:
+  validate:
+    name: terraform validate
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: terraform
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.5.7"
+          terraform_wrapper: false
+
+      - name: terraform fmt
+        run: terraform fmt -check -recursive
+
+      - name: terraform init
+        run: terraform init -input=false
+
+      - name: terraform validate
+        run: terraform validate
+
+  apply:
+    name: terraform apply
+    needs: validate
+    if: >-
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    environment: zedcloud
+    defaults:
+      run:
+        working-directory: terraform
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.5.7"
+          terraform_wrapper: false
+
+      - name: Require Zedcloud settings
+        run: |
+          missing=0
+          for name in TF_VAR_zedcloud_url TF_VAR_zedcloud_token TF_VAR_edge_app_name TF_VAR_project_name; do
+            if [ -z "${!name}" ]; then
+              echo "Set $name from a GitHub variable or the ZEDCLOUD_TOKEN secret."
+              missing=1
+            fi
+          done
+          exit "$missing"
+
+      - name: terraform init
+        run: terraform init -input=false
+
+      - name: Import the existing edge-app
+        run: |
+          if ! terraform state show zedcloud_application.compose >/dev/null 2>&1; then
+            terraform import -input=false zedcloud_application.compose "$TF_VAR_edge_app_name"
+          fi
+
+      - name: terraform apply
+        run: terraform apply -input=false -auto-approve -no-color

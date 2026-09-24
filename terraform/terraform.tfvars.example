@@ -1,0 +1,12 @@
+# Copy to terraform.tfvars and replace the placeholders.
+# terraform.tfvars is gitignored. In GitHub Actions the same values can be
+# set as TF_VAR_zedcloud_url, TF_VAR_zedcloud_token, TF_VAR_edge_app_name,
+# and TF_VAR_project_name.
+
+zedcloud_url   = "https://zedcontrol.zededa.net"
+zedcloud_token = "replace-with-api-token"
+edge_app_name  = "replace-with-edge-app-name"
+project_name   = "replace-with-project-name"
+
+# Optional. Leave empty to reuse edge_app_name.
+edge_app_title = ""
