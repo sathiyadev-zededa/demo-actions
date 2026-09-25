@@ -63,11 +63,8 @@ if not instances:
     sys.exit(0)
 
 for item in instances:
-    current = int(((item.get("purge") or {}).get("counter")) or 0)
-    nxt = current + 1
-    body = json.dumps({"counter": nxt}).encode()
-    url = base + "/api/v1/apps/instances/id/" + item["id"] + "/purge"
-    request = urllib.request.Request(url, data=body, headers=headers, method="PUT")
+    url = base + "/api/v1/apps/instances/id/" + item["id"] + "/refresh/purge"
+    request = urllib.request.Request(url, data=b"{}", headers=headers, method="PUT")
     try:
         with urllib.request.urlopen(request) as response:
             response.read()
@@ -77,5 +74,5 @@ for item in instances:
             "purge failed for %s (%s): HTTP %s %s"
             % (item.get("name"), item["id"], exc.code, detail)
         )
-    print("purged %s counter %s -> %s" % (item.get("name"), current, nxt))
+    print("purged %s (%s)" % (item.get("name"), item["id"]))
 PY
