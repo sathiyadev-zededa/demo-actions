@@ -92,9 +92,20 @@ jobs:
 
       - name: Import the existing edge-app
         run: |
-          if ! terraform state show zedcloud_application.compose >/dev/null 2>&1; then
-            terraform import -input=false zedcloud_application.compose "$TF_VAR_edge_app_name"
+          if terraform state show zedcloud_application.compose >/dev/null 2>&1; then
+            exit 0
           fi
+          # /apps/id/{id} requires the Zedcloud UUID. The edge-app name is
+          # resolved through /apps/name/{name} first.
+          app_id="$(
+            curl -fsS \
+              -H "Authorization: Bearer ${TF_VAR_zedcloud_token}" \
+              -H "Accept: application/json" \
+              "${TF_VAR_zedcloud_url%/}/api/v1/apps/name/${TF_VAR_edge_app_name}" \
+              | python3 -c 'import json,sys; print(json.load(sys.stdin)["id"])'
+          )"
+          echo "Importing edge-app ${TF_VAR_edge_app_name} as ${app_id}"
+          terraform import -input=false zedcloud_application.compose "$app_id"
 
       - name: terraform apply
         run: terraform apply -input=false -auto-approve -no-color
