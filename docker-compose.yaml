@@ -58,6 +58,8 @@ services:
     # Uncomment on the zrun GPU image:
     deploy:
       resources:
+        limits:
+          memory: 3G
         reservations:
           devices:
             - driver: nvidia
@@ -90,6 +92,10 @@ services:
     ports:
       - "8080:8080"
       - "9091:9091"
+    deploy:
+      resources:
+        limits:
+          memory: 3G
 
 volumes:
   ppe-models:
