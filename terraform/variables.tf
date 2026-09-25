@@ -28,7 +28,7 @@ variable "project_name" {
 variable "manifest_ac_kind" {
   description = "Edge-app manifest acKind."
   type        = string
-  default     = "VMManifest"
+  default     = "ComposeManifest"
 }
 
 variable "manifest_ac_version" {
@@ -46,5 +46,5 @@ variable "app_type" {
 variable "deployment_type" {
   description = "Edge-app deployment type."
   type        = string
-  default     = "DEPLOYMENT_TYPE_DOCKER_RUNTIME"
+  default     = "DEPLOYMENT_TYPE_STAND_ALONE"
 }
