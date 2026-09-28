@@ -39,6 +39,7 @@ services:
       - 0.0.0.0
       - --port
       - "8000"
+      - --gpu
     ports:
       - "8000:8000"
     volumes:
