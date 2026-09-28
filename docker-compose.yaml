@@ -22,7 +22,7 @@ services:
         echo "Done — $$(du -sh $$ONNX_FILE | cut -f1)"
 
   onnx-server:
-    image: commonpoc.azurecr.io/onnx_server:latest
+    image: commonpoc.azurecr.io/onnx-inference-server:gpu-amd64
     pull_policy: always
     restart: unless-stopped
     depends_on:
