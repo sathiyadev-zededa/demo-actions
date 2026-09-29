@@ -22,7 +22,7 @@ services:
         echo "Done — $$(du -sh $$ONNX_FILE | cut -f1)"
 
   onnx-server:
-    image: commonpoc.azurecr.io/onnx-inference-server:gpu-amd64
+    image: sathiyadev/onnx-inference-server:gpu-amd64
     pull_policy: always
     restart: unless-stopped
     depends_on:
@@ -60,7 +60,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 2G
+          memory: 3G
         reservations:
           devices:
             - driver: nvidia
@@ -68,7 +68,7 @@ services:
               capabilities: [gpu]
 
   video-processor:
-    image: commonpoc.azurecr.io/video_processor:latest
+    image: sathiyadev/video_processor:latest
     pull_policy: always
     restart: unless-stopped
     depends_on:
