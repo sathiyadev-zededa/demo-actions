@@ -60,7 +60,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 3G
+          memory: 2G
         reservations:
           devices:
             - driver: nvidia
